@@ -1,12 +1,11 @@
 {
   "name": "hide-plane",
   "version": "1.0.0",
-  "description": "藏好你的飞机 - 联机对战",
-  "main": "server.js",
+  "private": true,
   "scripts": {
     "start": "node server.js"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=18"
   }
 }
