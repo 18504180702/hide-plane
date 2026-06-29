@@ -38,7 +38,7 @@ function makeToken() {
 
 function makeRoomCode() {
   let code;
-  do code = String(Math.floor(1000 + Math.random() * 9000));
+  do code = String(Math.floor(100000 + Math.random() * 900000));
   while (rooms.has(code));
   return code;
 }
@@ -241,9 +241,47 @@ setInterval(() => {
   for (const room of rooms.values()) normalize(room);
 }, 250);
 
+const manifest = {
+  name: "藏好你的飞机",
+  short_name: "藏飞机",
+  start_url: "/",
+  scope: "/",
+  display: "standalone",
+  background_color: "#0E0E1A",
+  theme_color: "#1A1A2E",
+  description: "双人联机打飞机游戏",
+  icons: [
+    {
+      src: "/icon.svg",
+      sizes: "any",
+      type: "image/svg+xml",
+      purpose: "any maskable"
+    }
+  ]
+};
+
+const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#1A1A2E"/>
+  <circle cx="256" cy="256" r="210" fill="#25254A"/>
+  <text x="256" y="285" font-size="210" text-anchor="middle" dominant-baseline="middle">✈️</text>
+  <text x="256" y="430" font-size="54" text-anchor="middle" fill="#FFD866" font-family="Arial, sans-serif" font-weight="bold">藏飞机</text>
+</svg>`;
+
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
+
+    if (req.method === "GET" && url.pathname === "/manifest.webmanifest") {
+      res.writeHead(200, { "Content-Type": "application/manifest+json; charset=utf-8" });
+      res.end(JSON.stringify(manifest));
+      return;
+    }
+
+    if (req.method === "GET" && (url.pathname === "/icon.svg" || url.pathname === "/favicon.ico")) {
+      res.writeHead(200, { "Content-Type": "image/svg+xml; charset=utf-8" });
+      res.end(iconSvg);
+      return;
+    }
 
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
       const file = path.join(__dirname, "index.html");
@@ -429,10 +467,14 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
+  console.log(`服务器已启动，端口：${PORT}`);
   console.log(`本机地址: http://localhost:${PORT}`);
   Object.values(os.networkInterfaces()).flat().filter(Boolean).forEach((net) => {
     if (net.family === "IPv4" && !net.internal) {
       console.log(`局域网地址: http://${net.address}:${PORT}`);
     }
+  });
+});
+
   });
 });
