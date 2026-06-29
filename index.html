@@ -1,9 +1,15 @@
-<!doctype html>
-<html lang="zh-CN">
-<head>
+
+ 
+<头>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>藏好你的飞机</title>
+<链接 关系="清单" 链接="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1A1A2E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="藏好你的飞机">
+<meta name="mobile-web-app-capable" content="yes">
 <style>
 :root{
   --page:#0E0E1A;--panel:#1A1A2E;--top:#25254A;--text:#C8D0E0;--gold:#FFD866;
@@ -101,7 +107,7 @@ button:disabled{background:var(--disabled);color:#aaa;cursor:not-allowed}
 
       <div class="row">
         <label class="field">房间号
-          <input id="roomInput" inputmode="numeric" maxlength="4" placeholder="例如 1234" />
+          <input id="roomInput" inputmode="numeric" maxlength="6" placeholder="例如 123456" />
         </label>
         <div class="field">
           加入房间
@@ -109,7 +115,7 @@ button:disabled{background:var(--disabled);color:#aaa;cursor:not-allowed}
         </div>
       </div>
 
-      <div class="note">双方同时放置飞机。每架飞机各有 2 分钟，超时直接判负。音效会在首次点击后自动开启。</div>
+      <div class="note">双方同时放置飞机。每架飞机各有 2 分钟，超时直接判负。手机浏览器可添加到主屏幕。</div>
     </div>
 
     <div class="boardWrap" id="gameArea">
@@ -155,7 +161,7 @@ let local={room:null,token:null,playerId:null,state:null,count:2,selected:null,r
 let toastTimer=null;
 
 const audio={
-  ctx:null,bgmTimer:null,lastPhase:"",lastEndKey:"",
+  ctx:null,bgmTimer:null,
   init(){
     if(this.ctx)return;
     const Ctx=window.AudioContext||window.webkitAudioContext;
@@ -224,18 +230,22 @@ async function post(url,data){
   if(!json.ok)throw new Error(json.error||"操作失败");
   return json;
 }
+
 function showToast(msg){
   clearTimeout(toastTimer);
   toast.textContent=msg;
   toast.classList.add("show");
   toastTimer=setTimeout(()=>toast.classList.remove("show"),2000);
 }
+
 function validName(name){return /^[\u4e00-\u9fa5]{1,4}$/.test(name.trim())}
+
 function countKind(grid,kind){
   let n=0;
   for(const row of grid||[])for(const c of row)if(c&&c.kind===kind)n++;
   return n;
 }
+
 async function createRoom(){
   try{
     const name=$("nameInput").value.trim();
@@ -245,16 +255,18 @@ async function createRoom(){
     showToast("房间号 "+r.room);
   }catch(e){showToast(e.message)}
 }
+
 async function joinRoom(){
   try{
     const name=$("nameInput").value.trim();
     const room=$("roomInput").value.trim();
     if(!validName(name))return showToast("姓名必须是1到4个汉字");
-    if(!/^\d{4}$/.test(room))return showToast("请输入4位房间号");
+    if(!/^\d{6}$/.test(room))return showToast("请输入6位房间号");
     const r=await post("/api/join",{name,room});
     connect(r);
   }catch(e){showToast(e.message)}
 }
+
 function connect(r){
   local.room=r.room;
   local.token=r.token;
@@ -268,6 +280,7 @@ function connect(r){
   loadState();
   local.poll=setInterval(loadState,350);
 }
+
 async function loadState(){
   if(!local.room)return;
   try{
@@ -277,6 +290,7 @@ async function loadState(){
     applyState(json.state);
   }catch(e){showToast(e.message)}
 }
+
 function applyState(next){
   const prev=local.state;
 
@@ -297,17 +311,21 @@ function applyState(next){
   local.state=next;
   render();
 }
+
 function rotatePoint(pt,r){
   let x=pt.x,y=pt.y;
   for(let i=0;i<r;i++){const dx=x,dy=y-1;x=dy;y=1-dx}
   return{x,y,p:pt.p};
 }
+
 function planeCells(cx,cy,r){
   return BASE.map(p=>{const q=rotatePoint(p,r);return{x:cx+q.x,y:cy-q.y,p:q.p}});
 }
+
 function isLegal(cells,grid){
   return cells.every(c=>c.x>=0&&c.x<SIZE&&c.y>=0&&c.y<SIZE&&!grid[c.y][c.x]);
 }
+
 function makeCell(x,y,cls,text,handler){
   const d=document.createElement("div");
   d.className="cell "+(cls||"");
@@ -316,6 +334,7 @@ function makeCell(x,y,cls,text,handler){
   d.addEventListener("touchstart",e=>{e.preventDefault();handler(e)},{passive:false});
   return d;
 }
+
 function renderTop(){
   const s=local.state;
   if(!s){phaseText.textContent="联机准备";timerText.textContent="";diceText.textContent="";return}
@@ -341,6 +360,7 @@ function renderTop(){
     diceText.textContent="";
   }
 }
+
 function render(){
   const s=local.state;
   renderTop();
@@ -364,6 +384,7 @@ function render(){
   if(s.phase==="battle")renderBattle();
   if(s.phase==="end")renderWin();
 }
+
 function renderDice(){
   mainBoard.innerHTML="";
   boardTitle.textContent="正在掷骰";
@@ -374,6 +395,7 @@ function renderDice(){
   const pair=history[idx]||s.dice||[0,0];
   diceOverlay.textContent=`🎲 ${s.names[0]} ${pair[0]} : ${s.names[1]} ${pair[1]}${pair[0]===pair[1]?"  平局重掷":""}`;
 }
+
 function renderPlace(){
   const s=local.state;
   const canPlace=!s.ownDone;
@@ -399,6 +421,7 @@ function renderPlace(){
     }));
   }
 }
+
 async function placePlane(){
   const s=local.state;
   if(!local.selected||s.phase!=="place"||s.ownDone)return;
@@ -409,6 +432,7 @@ async function placePlane(){
     await loadState();
   }catch(e){showToast(e.message)}
 }
+
 function renderBattle(){
   const s=local.state;
   const myTurn=s.turn===s.playerId&&s.lockMs===0;
@@ -426,6 +450,7 @@ function renderBattle(){
   mini.style.display="block";
   renderOwnMini();
 }
+
 async function attack(x,y){
   const s=local.state;
   if(!s||s.phase!=="battle")return;
@@ -440,6 +465,7 @@ async function attack(x,y){
     await loadState();
   }catch(e){showToast(e.message)}
 }
+
 function renderOwnMini(){
   mini.innerHTML="";
   const b=document.createElement("div");
@@ -447,6 +473,7 @@ function renderOwnMini(){
   fillOwnBoard(b);
   mini.appendChild(b);
 }
+
 function fillOwnBoard(board){
   const s=local.state;
   board.innerHTML="";
@@ -460,11 +487,13 @@ function fillOwnBoard(board){
     board.appendChild(makeCell(x,y,cls,txt,()=>{}));
   }
 }
+
 function renderWin(){
   const s=local.state;
   $("winText").textContent=`${s.names[s.winner]}获胜！`;
   $("winSub").textContent=s.reason==="TIMEOUT"?(s.winner===s.playerId?"对方超时":"超时，您已失败"):"";
 }
+
 async function rematch(){
   try{
     await post("/api/rematch",{room:local.room,token:local.token});
@@ -472,6 +501,7 @@ async function rematch(){
     await loadState();
   }catch(e){showToast(e.message)}
 }
+
 function home(){
   clearInterval(local.poll);
   local={room:null,token:null,playerId:null,state:null,count:local.count,selected:null,rotation:0,poll:null};
@@ -500,6 +530,9 @@ $("homeBtn").onclick=home;
 mini.onclick=()=>{zoomMask.classList.add("show");fillOwnBoard(zoomBoard)};
 zoomMask.onclick=()=>zoomMask.classList.remove("show");
 </script>
+</body>
+</html>
+
 </body>
 </html>
 
