@@ -1,11 +1,12 @@
-
- 
-<头>
+<!doctype html>
+<html lang="zh-CN">
+<head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
 <title>藏好你的飞机</title>
-<链接 关系="清单" 链接="/manifest.webmanifest">
+<link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon.svg">
 <meta name="theme-color" content="#1A1A2E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="藏好你的飞机">
@@ -30,7 +31,15 @@ button:hover{background:var(--btn2)}
 button:active,.cell:active{transform:scale(.95)}
 button:disabled{background:var(--disabled);color:#aaa;cursor:not-allowed}
 .danger{background:var(--danger)}
-.main{flex:1;position:relative;display:flex;align-items:center;justify-content:center;padding:10px}
+.main{
+  flex:1;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px;
+  padding-bottom:calc(76px + env(safe-area-inset-bottom));
+}
 .setup{width:min(92vw,440px);background:var(--top);border:1px solid var(--border);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 12px 30px #0008}
 .setup h1{margin:0;color:var(--gold);font-size:clamp(26px,6vmin,40px);text-align:center;letter-spacing:0}
 .field{display:flex;flex-direction:column;gap:6px;font-weight:900}
@@ -42,15 +51,41 @@ button:disabled{background:var(--disabled);color:#aaa;cursor:not-allowed}
 .boardWrap{width:min(94vmin,calc(100vw - 20px));height:min(94vmin,calc(100dvh - 92px));max-width:900px;max-height:900px;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px}
 .boardTitle{min-height:28px;color:var(--gold);font-weight:900;text-align:center;font-size:clamp(14px,2.8vmin,20px)}
 .board{background:var(--board);display:grid;grid-template-columns:repeat(15,1fr);grid-template-rows:repeat(15,1fr);gap:1px;padding:2px;border:2px solid var(--border);border-radius:10px;touch-action:manipulation;user-select:none}
-#mainBoard{width:min(88vmin,calc(100vw - 20px));height:min(88vmin,calc(100dvh - 130px))}
+#mainBoard{width:min(88vmin,calc(100vw - 20px));height:min(88vmin,calc(100dvh - 150px))}
 .cell{background:var(--cell);border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--text);font-size:clamp(9px,1.9vmin,16px);transition:.08s transform,.08s background;line-height:1}
 .fog{background:var(--fog);color:var(--fogText)}
 .miss{background:var(--miss);color:var(--missText)}
 .blast{background:var(--blast);color:var(--blastText);border-color:var(--blastBorder);text-shadow:0 1px 4px #000}
 .p1{background:var(--p1);color:#fff}.p2{background:var(--p2);color:#fff}.p3{background:var(--p3);color:#111}
 .previewOk{background:rgba(60,200,60,.4)!important}.previewBad{background:rgba(200,60,60,.4)!important}
-.placeControls{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:none;gap:10px;z-index:4}
-.mini{position:absolute;right:12px;bottom:12px;width:130px;height:130px;z-index:5;border-radius:10px;overflow:hidden;box-shadow:0 0 18px #000b;cursor:pointer;display:none}
+.placeControls{
+  position:fixed;
+  left:50%;
+  bottom:max(12px, env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  display:none;
+  gap:10px;
+  z-index:80;
+  padding:8px;
+  background:rgba(14,14,26,.86);
+  border:1px solid var(--border);
+  border-radius:12px;
+  box-shadow:0 8px 24px #000b;
+}
+.placeControls button{min-width:82px}
+.mini{
+  position:absolute;
+  right:12px;
+  bottom:92px;
+  width:130px;
+  height:130px;
+  z-index:5;
+  border-radius:10px;
+  overflow:hidden;
+  box-shadow:0 0 18px #000b;
+  cursor:pointer;
+  display:none;
+}
 .mini .board{width:100%;height:100%;border-radius:10px;padding:1px}
 .mini .cell{border-radius:2px;font-size:7px;border-width:0}
 .zoomMask{position:absolute;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:10}
@@ -69,9 +104,16 @@ button:disabled{background:var(--disabled);color:#aaa;cursor:not-allowed}
 @media(max-width:560px){
   .topbar{height:54px;gap:6px;padding:6px}
   button{padding:8px 10px}
-  .mini{width:96px;height:96px;right:8px;bottom:8px}
-  .placeControls{bottom:8px}
-  #mainBoard{width:min(96vw,calc(100dvh - 150px));height:min(96vw,calc(100dvh - 150px))}
+  .mini{
+    width:96px;
+    height:96px;
+    right:8px;
+    bottom:84px;
+  }
+  .placeControls{
+    bottom:max(8px, env(safe-area-inset-bottom));
+  }
+  #mainBoard{width:min(96vw,calc(100dvh - 170px));height:min(96vw,calc(100dvh - 170px))}
   .row{grid-template-columns:1fr}
 }
 </style>
