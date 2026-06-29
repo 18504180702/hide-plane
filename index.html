@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>藏好你的飞机</title>
+<style>
+:root{
+  --page:#0E0E1A;--panel:#1A1A2E;--top:#25254A;--text:#C8D0E0;--gold:#FFD866;
+  --board:#2A2A4A;--cell:#3A3A5A;--border:#4A4A6A;--fog:#2A2A4A;--fogText:#5A5A7A;
+  --blast:#302B38;--blastText:#FFD866;--blastBorder:#FF8A3D;--miss:#1A2A3A;--missText:#8899AA;
+  --p1:#CC3333;--p2:#3366CC;--p3:#CCAA22;--btn:#2A4A7A;--btn2:#3A6AAA;
+  --disabled:#4A4A4A;--danger:#4A3A3A;--winMask:rgba(0,0,0,.7);--trophy:#FFD700;--winText:#FFDD44;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--page);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
+#app{height:100dvh;background:var(--panel);display:flex;flex-direction:column;position:relative}
+.topbar{height:58px;background:var(--top);display:flex;align-items:center;gap:10px;padding:8px 10px;font-size:clamp(12px,2.4vmin,16px);box-shadow:0 2px 12px #0006;z-index:3}
+.status{flex:1;display:flex;gap:10px;align-items:center;min-width:0;white-space:nowrap;overflow:hidden}
+.status span{overflow:hidden;text-overflow:ellipsis}
+.hl{color:var(--gold);font-weight:900}
+button{border:0;border-radius:10px;background:var(--btn);color:#fff;padding:10px 14px;font-weight:900;cursor:pointer;transition:.12s transform,.12s background;font-size:clamp(12px,2.5vmin,15px)}
+button:hover{background:var(--btn2)}
+button:active,.cell:active{transform:scale(.95)}
+button:disabled{background:var(--disabled);color:#aaa;cursor:not-allowed}
+.danger{background:var(--danger)}
+.main{flex:1;position:relative;display:flex;align-items:center;justify-content:center;padding:10px}
+.setup{width:min(92vw,440px);background:var(--top);border:1px solid var(--border);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 12px 30px #0008}
+.setup h1{margin:0;color:var(--gold);font-size:clamp(26px,6vmin,40px);text-align:center;letter-spacing:0}
+.field{display:flex;flex-direction:column;gap:6px;font-weight:900}
+.field input{height:44px;border-radius:8px;border:1px solid var(--border);background:var(--cell);color:var(--text);font-size:18px;padding:0 12px;outline:none}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.counts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.counts button.active{background:var(--gold);color:#111}
+.note{font-size:13px;color:#9DA8C0;line-height:1.45}
+.boardWrap{width:min(94vmin,calc(100vw - 20px));height:min(94vmin,calc(100dvh - 92px));max-width:900px;max-height:900px;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+.boardTitle{min-height:28px;color:var(--gold);font-weight:900;text-align:center;font-size:clamp(14px,2.8vmin,20px)}
+.board{background:var(--board);display:grid;grid-template-columns:repeat(15,1fr);grid-template-rows:repeat(15,1fr);gap:1px;padding:2px;border:2px solid var(--border);border-radius:10px;touch-action:manipulation;user-select:none}
+#mainBoard{width:min(88vmin,calc(100vw - 20px));height:min(88vmin,calc(100dvh - 130px))}
+.cell{background:var(--cell);border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--text);font-size:clamp(9px,1.9vmin,16px);transition:.08s transform,.08s background;line-height:1}
+.fog{background:var(--fog);color:var(--fogText)}
+.miss{background:var(--miss);color:var(--missText)}
+.blast{background:var(--blast);color:var(--blastText);border-color:var(--blastBorder);text-shadow:0 1px 4px #000}
+.p1{background:var(--p1);color:#fff}.p2{background:var(--p2);color:#fff}.p3{background:var(--p3);color:#111}
+.previewOk{background:rgba(60,200,60,.4)!important}.previewBad{background:rgba(200,60,60,.4)!important}
+.placeControls{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:none;gap:10px;z-index:4}
+.mini{position:absolute;right:12px;bottom:12px;width:130px;height:130px;z-index:5;border-radius:10px;overflow:hidden;box-shadow:0 0 18px #000b;cursor:pointer;display:none}
+.mini .board{width:100%;height:100%;border-radius:10px;padding:1px}
+.mini .cell{border-radius:2px;font-size:7px;border-width:0}
+.zoomMask{position:absolute;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:10}
+.zoomMask.show{display:flex}
+.zoomBoard{width:min(92vmin,92vw);height:min(92vmin,calc(100dvh - 80px))}
+.toast{position:absolute;top:68px;left:50%;transform:translateX(-50%);background:#000c;color:var(--gold);padding:10px 16px;border-radius:999px;font-weight:900;z-index:20;opacity:0;pointer-events:none;transition:.2s;white-space:nowrap}
+.toast.show{opacity:1}
+.win{position:absolute;inset:0;background:var(--winMask);display:none;z-index:30;align-items:center;justify-content:center;flex-direction:column;gap:14px;text-align:center}
+.win.show{display:flex}
+.winText{position:relative;z-index:2;font-size:clamp(30px,8vmin,72px);color:var(--winText);font-weight:1000;text-shadow:0 2px 8px #000;max-width:92vw;white-space:normal}
+.winSub{font-size:clamp(16px,4vmin,28px);color:var(--text);font-weight:900}
+.trophy{font-size:min(38vw,38dvh);line-height:1;color:var(--trophy);filter:drop-shadow(0 0 18px #000)}
+.winBtns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.diceOverlay{position:absolute;inset:58px 0 0;display:none;align-items:center;justify-content:center;z-index:12;background:rgba(14,14,26,.78);font-size:clamp(34px,10vmin,92px);font-weight:1000;color:var(--gold);text-align:center;line-height:1.3}
+.diceOverlay.show{display:flex}
+@media(max-width:560px){
+  .topbar{height:54px;gap:6px;padding:6px}
+  button{padding:8px 10px}
+  .mini{width:96px;height:96px;right:8px;bottom:8px}
+  .placeControls{bottom:8px}
+  #mainBoard{width:min(96vw,calc(100dvh - 150px));height:min(96vw,calc(100dvh - 150px))}
+  .row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="status">
+      <span id="phaseText">联机准备</span>
+      <span id="timerText" class="hl"></span>
+      <span id="diceText" class="hl"></span>
+    </div>
+    <button class="danger" id="leaveBtn">返回</button>
+  </div>
+
+  <div class="main">
+    <div class="setup" id="setup">
+      <h1>藏好你的飞机</h1>
+      <label class="field">姓名
+        <input id="nameInput" maxlength="4" value="玩家一" />
+      </label>
+
+      <div class="field">
+        创建房间飞机数量
+        <div class="counts">
+          <button class="countBtn" data-count="1">1架</button>
+          <button class="countBtn active" data-count="2">2架</button>
+          <button class="countBtn" data-count="3">3架</button>
+        </div>
+      </div>
+
+      <button id="createBtn">创建房间</button>
+
+      <div class="row">
+        <label class="field">房间号
+          <input id="roomInput" inputmode="numeric" maxlength="4" placeholder="例如 1234" />
+        </label>
+        <div class="field">
+          加入房间
+          <button id="joinBtn">加入</button>
+        </div>
+      </div>
+
+      <div class="note">双方同时放置飞机。每架飞机各有 2 分钟，超时直接判负。音效会在首次点击后自动开启。</div>
+    </div>
+
+    <div class="boardWrap" id="gameArea">
+      <div class="boardTitle" id="boardTitle"></div>
+      <div class="board" id="mainBoard"></div>
+    </div>
+
+    <div class="placeControls" id="placeControls">
+      <button id="rotateBtn">旋转</button>
+      <button id="placeBtn" disabled>放置</button>
+    </div>
+
+    <div class="mini" id="mini"></div>
+    <div class="zoomMask" id="zoomMask"><div class="board zoomBoard" id="zoomBoard"></div></div>
+    <div class="toast" id="toast"></div>
+    <div class="diceOverlay" id="diceOverlay"></div>
+
+    <div class="win" id="win">
+      <div class="winText" id="winText"></div>
+      <div class="winSub" id="winSub"></div>
+      <div class="trophy">🏆</div>
+      <div class="winBtns">
+        <button id="againBtn">再来一局</button>
+        <button class="danger" id="homeBtn">返回主页</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SIZE=15;
+const PARTS={HEAD:"头",WING:"翼",BODY:"身",TAIL:"尾"};
+const BASE=[
+  {x:0,y:1,p:"HEAD"},{x:-2,y:0,p:"WING"},{x:-1,y:0,p:"WING"},{x:1,y:0,p:"WING"},{x:2,y:0,p:"WING"},
+  {x:0,y:0,p:"BODY"},{x:0,y:-1,p:"BODY"},{x:0,y:-2,p:"BODY"},{x:-1,y:-2,p:"TAIL"},{x:1,y:-2,p:"TAIL"}
+];
+const COLORS=["p1","p2","p3"];
+const $=id=>document.getElementById(id);
+const phaseText=$("phaseText"),timerText=$("timerText"),diceText=$("diceText"),boardTitle=$("boardTitle");
+const mainBoard=$("mainBoard"),mini=$("mini"),zoomBoard=$("zoomBoard"),zoomMask=$("zoomMask"),toast=$("toast"),diceOverlay=$("diceOverlay");
+
+let local={room:null,token:null,playerId:null,state:null,count:2,selected:null,rotation:0,poll:null};
+let toastTimer=null;
+
+const audio={
+  ctx:null,bgmTimer:null,lastPhase:"",lastEndKey:"",
+  init(){
+    if(this.ctx)return;
+    const Ctx=window.AudioContext||window.webkitAudioContext;
+    if(!Ctx)return;
+    this.ctx=new Ctx();
+    this.startBgm();
+  },
+  tone(freq,dur,type="sine",gain=0.04,delay=0){
+    if(!this.ctx)return;
+    const t=this.ctx.currentTime+delay;
+    const osc=this.ctx.createOscillator();
+    const g=this.ctx.createGain();
+    osc.type=type;
+    osc.frequency.setValueAtTime(freq,t);
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(gain,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    osc.connect(g).connect(this.ctx.destination);
+    osc.start(t);
+    osc.stop(t+dur+0.03);
+  },
+  noise(dur=0.18,gain=0.05){
+    if(!this.ctx)return;
+    const len=Math.floor(this.ctx.sampleRate*dur);
+    const buf=this.ctx.createBuffer(1,len,this.ctx.sampleRate);
+    const data=buf.getChannelData(0);
+    for(let i=0;i<len;i++)data[i]=(Math.random()*2-1)*(1-i/len);
+    const src=this.ctx.createBufferSource();
+    const g=this.ctx.createGain();
+    g.gain.value=gain;
+    src.buffer=buf;
+    src.connect(g).connect(this.ctx.destination);
+    src.start();
+  },
+  play(name){
+    this.init();
+    if(!this.ctx)return;
+    if(name==="click")this.tone(520,0.06,"square",0.025);
+    if(name==="attack"){this.tone(160,0.08,"sawtooth",0.06);this.noise(0.12,0.035)}
+    if(name==="hit"){this.noise(0.22,0.08);this.tone(90,0.18,"sawtooth",0.05)}
+    if(name==="hurt"){this.noise(0.28,0.09);this.tone(70,0.22,"triangle",0.055)}
+    if(name==="miss"){this.tone(260,0.08,"triangle",0.03);this.tone(190,0.1,"triangle",0.025,0.07)}
+    if(name==="dice"){for(let i=0;i<8;i++)this.tone(360+i*35,0.05,"square",0.025,i*0.08)}
+    if(name==="win"){this.tone(523,0.18,"triangle",0.05);this.tone(659,0.18,"triangle",0.05,0.16);this.tone(784,0.34,"triangle",0.06,0.32)}
+    if(name==="lose"){this.tone(330,0.18,"sine",0.04);this.tone(247,0.22,"sine",0.04,0.18);this.tone(196,0.35,"sine",0.045,0.38)}
+  },
+  startBgm(){
+    if(this.bgmTimer||!this.ctx)return;
+    const notes=[196,247,294,247,220,262,330,262];
+    let i=0;
+    this.bgmTimer=setInterval(()=>{
+      if(!this.ctx)return;
+      this.tone(notes[i%notes.length],0.35,"sine",0.012);
+      this.tone(notes[(i+2)%notes.length]/2,0.5,"triangle",0.009);
+      i++;
+    },520);
+  }
+};
+
+document.addEventListener("pointerdown",()=>audio.init(),true);
+document.addEventListener("click",(e)=>{if(e.target.tagName==="BUTTON")audio.play("click")},true);
+
+async function post(url,data){
+  const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
+  const json=await res.json();
+  if(!json.ok)throw new Error(json.error||"操作失败");
+  return json;
+}
+function showToast(msg){
+  clearTimeout(toastTimer);
+  toast.textContent=msg;
+  toast.classList.add("show");
+  toastTimer=setTimeout(()=>toast.classList.remove("show"),2000);
+}
+function validName(name){return /^[\u4e00-\u9fa5]{1,4}$/.test(name.trim())}
+function countKind(grid,kind){
+  let n=0;
+  for(const row of grid||[])for(const c of row)if(c&&c.kind===kind)n++;
+  return n;
+}
+async function createRoom(){
+  try{
+    const name=$("nameInput").value.trim();
+    if(!validName(name))return showToast("姓名必须是1到4个汉字");
+    const r=await post("/api/create",{name,planeCount:local.count});
+    connect(r);
+    showToast("房间号 "+r.room);
+  }catch(e){showToast(e.message)}
+}
+async function joinRoom(){
+  try{
+    const name=$("nameInput").value.trim();
+    const room=$("roomInput").value.trim();
+    if(!validName(name))return showToast("姓名必须是1到4个汉字");
+    if(!/^\d{4}$/.test(room))return showToast("请输入4位房间号");
+    const r=await post("/api/join",{name,room});
+    connect(r);
+  }catch(e){showToast(e.message)}
+}
+function connect(r){
+  local.room=r.room;
+  local.token=r.token;
+  local.playerId=r.playerId;
+  local.selected=null;
+  local.rotation=0;
+  $("setup").style.display="none";
+  $("gameArea").style.display="flex";
+  $("win").classList.remove("show");
+  clearInterval(local.poll);
+  loadState();
+  local.poll=setInterval(loadState,350);
+}
+async function loadState(){
+  if(!local.room)return;
+  try{
+    const res=await fetch(`/api/state?room=${encodeURIComponent(local.room)}&token=${encodeURIComponent(local.token)}`);
+    const json=await res.json();
+    if(!json.ok)throw new Error(json.error||"同步失败");
+    applyState(json.state);
+  }catch(e){showToast(e.message)}
+}
+function applyState(next){
+  const prev=local.state;
+
+  if(prev){
+    if(prev.phase!=="dice"&&next.phase==="dice")audio.play("dice");
+
+    if(next.phase==="battle"){
+      if(countKind(next.enemyView,"MISS")>countKind(prev.enemyView,"MISS"))audio.play("miss");
+      if(countKind(next.enemyView,"HIT")>countKind(prev.enemyView,"HIT"))audio.play("hit");
+      if(countKind(next.ownAttacks,"HIT")>countKind(prev.ownAttacks,"HIT"))audio.play("hurt");
+    }
+
+    if(prev.phase!=="end"&&next.phase==="end"){
+      audio.play(next.winner===next.playerId?"win":"lose");
+    }
+  }
+
+  local.state=next;
+  render();
+}
+function rotatePoint(pt,r){
+  let x=pt.x,y=pt.y;
+  for(let i=0;i<r;i++){const dx=x,dy=y-1;x=dy;y=1-dx}
+  return{x,y,p:pt.p};
+}
+function planeCells(cx,cy,r){
+  return BASE.map(p=>{const q=rotatePoint(p,r);return{x:cx+q.x,y:cy-q.y,p:q.p}});
+}
+function isLegal(cells,grid){
+  return cells.every(c=>c.x>=0&&c.x<SIZE&&c.y>=0&&c.y<SIZE&&!grid[c.y][c.x]);
+}
+function makeCell(x,y,cls,text,handler){
+  const d=document.createElement("div");
+  d.className="cell "+(cls||"");
+  d.textContent=text||"";
+  d.addEventListener("click",handler);
+  d.addEventListener("touchstart",e=>{e.preventDefault();handler(e)},{passive:false});
+  return d;
+}
+function renderTop(){
+  const s=local.state;
+  if(!s){phaseText.textContent="联机准备";timerText.textContent="";diceText.textContent="";return}
+  if(s.phase==="lobby"){
+    phaseText.textContent=`房间 ${s.room} 等待对手`;
+    timerText.textContent="";
+    diceText.textContent="";
+  }else if(s.phase==="place"){
+    phaseText.textContent=`同时放置：你 ${s.ownPlaced}/${s.planeCount}，对方 ${s.enemyPlaced}/${s.planeCount}`;
+    timerText.textContent=s.ownDone?"等待对方":`倒计时 ${s.timeLeft}s`;
+    diceText.textContent="";
+  }else if(s.phase==="dice"){
+    phaseText.textContent="骰子决定先手";
+    timerText.textContent="";
+    diceText.textContent=s.dice&&s.dice[0]?`${s.names[0]} ${s.dice[0]} : ${s.names[1]} ${s.dice[1]}`:"";
+  }else if(s.phase==="battle"){
+    phaseText.textContent=`${s.names[s.turn]} 攻击`;
+    timerText.textContent=s.lockMs>0?`切换 ${Math.ceil(s.lockMs/1000)}s`:"";
+    diceText.textContent=`骰子 ${s.names[0]} ${s.dice[0]} : ${s.names[1]} ${s.dice[1]}`;
+  }else{
+    phaseText.textContent="游戏结束";
+    timerText.textContent="";
+    diceText.textContent="";
+  }
+}
+function render(){
+  const s=local.state;
+  renderTop();
+
+  $("placeControls").style.display="none";
+  mini.style.display="none";
+  diceOverlay.classList.toggle("show",s&&s.phase==="dice");
+
+  if(!s)return;
+
+  if(s.phase==="lobby"){
+    boardTitle.textContent=`房间号：${s.room}`;
+    mainBoard.innerHTML="";
+    return;
+  }
+
+  $("win").classList.toggle("show",s.phase==="end");
+
+  if(s.phase==="place")renderPlace();
+  if(s.phase==="dice")renderDice();
+  if(s.phase==="battle")renderBattle();
+  if(s.phase==="end")renderWin();
+}
+function renderDice(){
+  mainBoard.innerHTML="";
+  boardTitle.textContent="正在掷骰";
+  const s=local.state;
+  const history=s.diceHistory||[];
+  const elapsed=Date.now()-(s.diceStart||Date.now());
+  const idx=history.length?Math.min(history.length-1,Math.floor(elapsed/450)):0;
+  const pair=history[idx]||s.dice||[0,0];
+  diceOverlay.textContent=`🎲 ${s.names[0]} ${pair[0]} : ${s.names[1]} ${pair[1]}${pair[0]===pair[1]?"  平局重掷":""}`;
+}
+function renderPlace(){
+  const s=local.state;
+  const canPlace=!s.ownDone;
+  const grid=s.ownGrid;
+  const cells=canPlace&&local.selected?planeCells(local.selected.x,local.selected.y,local.rotation):[];
+  const valid=canPlace&&local.selected&&isLegal(cells,grid);
+
+  boardTitle.textContent=canPlace?`放置你的第 ${s.ownPlaced+1}/${s.planeCount} 架飞机`:"你已完成放置，等待对方";
+  $("placeControls").style.display=canPlace?"flex":"none";
+  $("placeBtn").disabled=!valid;
+
+  mainBoard.innerHTML="";
+  for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){
+    const fixed=grid[y][x];
+    const prev=cells.find(c=>c.x===x&&c.y===y);
+    let cls=fixed?COLORS[fixed.plane%3]:"";
+    let txt=fixed?PARTS[fixed.part]:"";
+    if(prev){cls=valid?"previewOk":"previewBad";txt=PARTS[prev.p]}
+    mainBoard.appendChild(makeCell(x,y,cls,txt,()=>{
+      if(!canPlace)return;
+      local.selected={x,y};
+      render();
+    }));
+  }
+}
+async function placePlane(){
+  const s=local.state;
+  if(!local.selected||s.phase!=="place"||s.ownDone)return;
+  try{
+    await post("/api/place",{room:local.room,token:local.token,x:local.selected.x,y:local.selected.y,rotation:local.rotation});
+    local.selected=null;
+    local.rotation=0;
+    await loadState();
+  }catch(e){showToast(e.message)}
+}
+function renderBattle(){
+  const s=local.state;
+  const myTurn=s.turn===s.playerId&&s.lockMs===0;
+  boardTitle.textContent=myTurn?`攻击目标：${s.names[1-s.playerId]}`:`等待 ${s.names[s.turn]} 攻击`;
+  mainBoard.innerHTML="";
+
+  for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){
+    const a=s.enemyView[y][x];
+    let cls="fog",txt="?";
+    if(a&&a.kind==="MISS"){cls="miss";txt="✕"}
+    else if(a&&a.kind==="HIT"){cls="blast";txt="💣"+PARTS[a.part]}
+    mainBoard.appendChild(makeCell(x,y,cls,txt,()=>attack(x,y)));
+  }
+
+  mini.style.display="block";
+  renderOwnMini();
+}
+async function attack(x,y){
+  const s=local.state;
+  if(!s||s.phase!=="battle")return;
+  if(s.turn!==s.playerId)return showToast("还没轮到你攻击");
+  if(s.lockMs>0)return showToast("请等待回合切换");
+  if(s.enemyView[y][x])return showToast("该格子已攻击过");
+
+  audio.play("attack");
+
+  try{
+    await post("/api/attack",{room:local.room,token:local.token,x,y});
+    await loadState();
+  }catch(e){showToast(e.message)}
+}
+function renderOwnMini(){
+  mini.innerHTML="";
+  const b=document.createElement("div");
+  b.className="board";
+  fillOwnBoard(b);
+  mini.appendChild(b);
+}
+function fillOwnBoard(board){
+  const s=local.state;
+  board.innerHTML="";
+  for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){
+    const own=s.ownGrid[y][x];
+    const a=s.ownAttacks[y][x];
+    let cls=own?COLORS[own.plane%3]:"";
+    let txt=own?PARTS[own.part]:"";
+    if(a&&a.kind==="MISS"){cls="miss";txt="✕"}
+    else if(a&&a.kind==="HIT"){cls="blast";txt="💣"+PARTS[a.part]}
+    board.appendChild(makeCell(x,y,cls,txt,()=>{}));
+  }
+}
+function renderWin(){
+  const s=local.state;
+  $("winText").textContent=`${s.names[s.winner]}获胜！`;
+  $("winSub").textContent=s.reason==="TIMEOUT"?(s.winner===s.playerId?"对方超时":"超时，您已失败"):"";
+}
+async function rematch(){
+  try{
+    await post("/api/rematch",{room:local.room,token:local.token});
+    showToast("已准备再来一局，等待对方确认");
+    await loadState();
+  }catch(e){showToast(e.message)}
+}
+function home(){
+  clearInterval(local.poll);
+  local={room:null,token:null,playerId:null,state:null,count:local.count,selected:null,rotation:0,poll:null};
+  $("setup").style.display="flex";
+  $("gameArea").style.display="none";
+  $("win").classList.remove("show");
+  diceOverlay.classList.remove("show");
+  zoomMask.classList.remove("show");
+  mainBoard.innerHTML="";
+  renderTop();
+}
+
+document.querySelectorAll(".countBtn").forEach(btn=>{
+  btn.onclick=()=>{
+    local.count=Number(btn.dataset.count);
+    document.querySelectorAll(".countBtn").forEach(b=>b.classList.toggle("active",b===btn));
+  };
+});
+$("createBtn").onclick=createRoom;
+$("joinBtn").onclick=joinRoom;
+$("rotateBtn").onclick=()=>{local.rotation=(local.rotation+1)%4;render()};
+$("placeBtn").onclick=placePlane;
+$("leaveBtn").onclick=home;
+$("againBtn").onclick=rematch;
+$("homeBtn").onclick=home;
+mini.onclick=()=>{zoomMask.classList.add("show");fillOwnBoard(zoomBoard)};
+zoomMask.onclick=()=>zoomMask.classList.remove("show");
+</script>
+</body>
+</html>
+
